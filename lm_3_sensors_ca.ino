@@ -14,7 +14,7 @@
 */
 //-------------------------------------------------------------------------------------
 // Luminous Mycology - a project by Bob Eells, October-November of 2013, with a lot of help from his meatspace and cyberspace friends.
-// Special thanks to Penax, Chainsaw, Mutant Garage, Tanjent and WAW IV
+// Special thanks to Penax, Chainsaw, Mutant Garage, Tanjent and BBQNinja
 
 // use the code for anything you like, but don't trust it further than you can throw it.
 // hobbies are only so successful at keeping planes in the sky.
@@ -23,7 +23,7 @@
 
 #include <NewPing.h>
 
-#define MAX_DISTANCE 10 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
+#define MAX_DISTANCE 50 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 //#define HOW_SMOOTH 3 // how many readings to average together in ping_median - REMOVED - performance impact was too high.  Ended up simply throwing out zeros below a variable threshold.
 #define REVERSE_POLARITY 0 //  0 = less distance is more bright.  1 = more distance is more bright.
 #define IGNORE_ZEROS 7 // how many 0 readings we should ignore before trusting them.  Set low to get a faster response to people leaving at the expense of glitchier display.
@@ -39,12 +39,13 @@ unsigned int cm_b = 0;
 
 //zero-counts, tracking the number of consecutive 0s for any given pixel.  
 //These sensors are glitchy and sometimes fail to hear the echo, but ping_median was too big a performance impact.  Rolled my own simple outlier discarder.
+//for my purposes, I'm happy just throwing out the first n 0s I get.
 unsigned int zc_r = 0;
 unsigned int zc_g = 0;
 unsigned int zc_b = 0;
 
 //define our RGB pins
-int r_pin = 3;
+int r_pin = 10;
 int g_pin = 5;
 int b_pin = 6;
 
@@ -57,6 +58,7 @@ void setup() {
   pinMode(r_pin, OUTPUT); //initialize LED pins
   pinMode(g_pin, OUTPUT);  
   pinMode(b_pin, OUTPUT);    
+  check_LEDs(r_pin, g_pin, b_pin);
 }
 
 void loop() {
@@ -97,8 +99,6 @@ void loop() {
     int color_1[] = {160,20,0};
     int color_2[] = {0,0,255};
     preset_ret = 1;
-    
-    check_LEDs(r_pin,g_pin,b_pin);
     
     //preset_ret = nice_fader(r_pin,g_pin,b_pin,20);
     if(preset_ret != 999 && (random(10) > 5))
@@ -175,7 +175,7 @@ int blinks(int brightness, int delay_time, int fadeAmount, int rp, int gp, int b
     //set the modulo below to get at least a few pings a second.
     if((x % 2) == 0)
     {
-      if(sonar_r.ping() > 0 || sonar_g.ping() > 0 || sonar_b.ping() > 0)
+      if(checkPings(sonar_r,sonar_g,sonar_b) == 999)
       {
         return 999;
       }        
@@ -217,7 +217,7 @@ int randomized(int loops, int ms_del, int rp, int gp, int bp){
   b=0;
   for(int y=0;y<loops;y++)
   {
-    steps = random(128,1024);
+    steps = random(256,1024);
     r2 = r;
     g2 = g;
     b2 = b;
@@ -239,7 +239,7 @@ int randomized(int loops, int ms_del, int rp, int gp, int bp){
       if((x % 40) == 0)
       {
         Serial.println(String("Randomized: ")+y+", "+x);              
-        if(sonar_r.ping() > 0 || sonar_g.ping() > 0 || sonar_b.ping() > 0)
+        if(checkPings(sonar_r,sonar_g,sonar_b) == 999)
         {
           return 999;
         }        
@@ -268,7 +268,7 @@ int omgp(int rp,int gp,int bp, int ms_del)
   for(int x = 0;x<7;x++)
   {
     Serial.println(String("Oh My God, Ponies!: ")+x);       
-    if(sonar_r.ping() > 0 || sonar_g.ping() > 0 || sonar_b.ping() > 0)
+    if(checkPings(sonar_r,sonar_g,sonar_b) == 999)
     {
       return 999;
     }     
@@ -330,7 +330,7 @@ int omgp_fader(int rp,int gp,int bp, int ms_del)
   for(int x = 0;x<7;x++)
   {
     Serial.println(String("Oh My God, Ponies Fader!: ")+x);       
-    if(sonar_r.ping() > 0 || sonar_g.ping() > 0 || sonar_b.ping() > 0)
+    if(checkPings(sonar_r,sonar_g,sonar_b) == 999)
     {
       return 999;
     }     
@@ -354,7 +354,7 @@ int alternator(int color_1[], int color_2[], int rp, int gp, int bp)
   while(d > 1)
   {  
     Serial.println(String("Alternator: ")+d);       
-    if(sonar_r.ping() > 0 || sonar_g.ping() > 0 || sonar_b.ping() > 0)
+    if(checkPings(sonar_r,sonar_g,sonar_b) == 999)
     {
       return 999;
     }         
@@ -371,7 +371,7 @@ int alternator(int color_1[], int color_2[], int rp, int gp, int bp)
   while(d < 1025)
   {  
     Serial.println(String("Alternator: ")+d);       
-    if(sonar_r.ping() > 0 || sonar_g.ping() > 0 || sonar_b.ping() > 0)
+    if(checkPings(sonar_r,sonar_g,sonar_b) == 999)
     {
       return 999;
     }         
@@ -408,7 +408,7 @@ int fader(int color_1[], int color_2[], int steps, int rp, int gp, int bp, int m
   {
     if((x % 40) == 0)
     {        
-      if(sonar_r.ping() > 0 || sonar_g.ping() > 0 || sonar_b.ping() > 0)
+      if(checkPings(sonar_r,sonar_g,sonar_b) == 999)
       {
         return 999;
       }        
@@ -430,7 +430,8 @@ int fader(int color_1[], int color_2[], int steps, int rp, int gp, int bp, int m
   }  
   return 1;  
 }
-/*
+
+ /*
 
 .__           .__                       
 |  |__   ____ |  | ______   ___________ 
@@ -475,8 +476,21 @@ float getDelta(float color, float color2, int steps)
 
 void lmWrite(int pin,float val)
 {
-	//Programs were written for Common cathode, so values must adjust for common anode.
-	//swap next two lines to switch back...It's bad enough to add a subtract to every output, I'm not adding a conditional too.
-	//analogWrite(pin,val);
-        analogWrite(pin,(255-val));
+	//Programs were written for Common cathode, so values must adjust for common anode, so I added a wrapper around the analogWrite call.
+        //Funny thing is, somewhere in the movement to transistors and multiple LEDs, I had to swap it back.  If the values are goofy,
+        //swap next two lines to switch back...It's bad enough to add a subtract to every output, I'm not adding a conditional too.
+	//analogWrite(255-pin,val);
+        analogWrite(pin,(val));
+}
+
+int checkPings(NewPing sonar_r, NewPing sonar_g, NewPing sonar_b)
+{
+  int r = sonar_r.ping();
+  int g = sonar_g.ping();
+  int b = sonar_b.ping();
+  if(r > 0 || g > 0 || b > 0)
+  {
+    return 999;
+  }
+  return 1;  
 }
